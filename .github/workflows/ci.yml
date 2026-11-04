@@ -1,0 +1,46 @@
+name: CI
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-msvc, aarch64-pc-windows-msvc]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - run: cargo build --release --target ${{ matrix.target }}
+      - shell: pwsh
+        run: |
+          $name = "jobexec-${{ github.ref_name }}-${{ matrix.target }}.zip"
+          Compress-Archive -Path target/${{ matrix.target }}/release/jobexec.exe, README.md, LICENSE -DestinationPath $name
+          gh release create ${{ github.ref_name }} --title ${{ github.ref_name }} --generate-notes 2>$null
+          gh release upload ${{ github.ref_name }} $name --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
