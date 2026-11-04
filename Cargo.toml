@@ -14,7 +14,7 @@ categories = ["command-line-utilities", "os::windows-apis"]
 name = "jobexec"
 path = "src/main.rs"
 
-[target.'cfg(windows)'.dependencies]
+[dependencies]
 windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_Security",

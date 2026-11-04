@@ -5,14 +5,12 @@
 //! even after its parent exits, so killing `jobexec` (e.g. Node's `child.kill()`, which is
 //! `TerminateProcess`) closes the only job handle and the kernel kills the entire tree.
 //!
-//! On Unix, process groups already solve this; jobexec simply `exec`s the command so callers
-//! can use one code path on every platform.
+//! Windows-only: on Unix, process groups already solve this (spawn with `setsid`, kill `-pgid`).
 
-#[cfg_attr(not(windows), allow(dead_code))]
+#[cfg(not(windows))]
+compile_error!("jobexec is Windows-only; on Unix use process groups (setsid + kill(-pgid))");
+
 mod cmdline;
-#[cfg(unix)]
-mod unix;
-#[cfg(windows)]
 mod windows;
 
 use std::time::Duration;
@@ -46,12 +44,11 @@ jobexec - run a command so its whole process tree dies with it
 USAGE:
     jobexec [OPTIONS] [--] <program> [args...]
 
-On Windows the command runs inside a Job Object with KILL_ON_JOB_CLOSE:
+The command runs inside a Windows Job Object with KILL_ON_JOB_CLOSE:
 killing jobexec (TerminateProcess, taskkill /F, Node's child.kill()) kills
 every descendant, even ones whose parent already exited. The child's command
 line is forwarded verbatim. stdin/stdout/stderr are inherited.
 
-On Unix jobexec just execs the command (use process groups there).
 
 OPTIONS:
     --wait <all|main>   all  (default): exit when every process in the job exited
@@ -142,10 +139,7 @@ pub fn parse_options(args: &[String]) -> Options {
 }
 
 fn main() {
-    #[cfg(windows)]
     windows::main();
-    #[cfg(unix)]
-    unix::main();
 }
 
 #[cfg(test)]

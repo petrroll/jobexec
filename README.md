@@ -12,8 +12,8 @@ including ones whose parent has already exited, and none can break away. When `j
 dies for any reason (`child.kill()`, `TerminateProcess`, `taskkill /F`, a crash), the kernel
 closes the job handle and **kills the entire tree**.
 
-On Linux and macOS it just `exec`s the command. Process groups already handle this there
-(`spawn(..., { detached: true })` + `process.kill(-pid)`), so callers can keep one code path.
+Windows-only. On Linux and macOS, process groups already handle this
+(`spawn(..., { detached: true })` + `process.kill(-pid)`), so just spawn the command directly there.
 
 ## Why
 
